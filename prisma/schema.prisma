@@ -1,0 +1,298 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Organization - single city instance
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  timezone    String   @default("America/Chicago")
+  primaryColor   String @default("#C8962E")
+  secondaryColor String @default("#1e3a5f")
+  customCss   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  calendars   Calendar[]
+  users       User[]
+  hosts       Host[]
+  venues      Venue[]
+  categories  Category[]
+  tags        Tag[]
+  ageGroups   AgeGroup[]
+  domainWhitelist DomainWhitelist[]
+}
+
+// Calendar - department or topic-specific grouping
+model Calendar {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String   @default("#C8962E")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      EventCalendar[]
+  userRoles   UserCalendarRole[]
+  domainWhitelist DomainWhitelist[]
+}
+
+// User - all user accounts
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  calendarRoles UserCalendarRole[]
+  submittedEvents Event[] @relation("SubmittedBy")
+  moderatedEvents Event[] @relation("ModeratedBy")
+}
+
+// UserCalendarRole - role assignment per calendar
+model UserCalendarRole {
+  id         String   @id @default(cuid())
+  role       String   // PUBLIC_USER, CONTRIBUTOR, EDITOR, ADMIN
+  createdAt  DateTime @default(now())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id])
+
+  @@unique([userId, calendarId])
+}
+
+// Event - main event entity
+model Event {
+  id              String   @id @default(cuid())
+  title           String
+  shortDescription String
+  longDescription String?
+  coverImage      String?
+  startDate       DateTime
+  endDate         DateTime
+  isAllDay        Boolean  @default(false)
+
+  // Location
+  venueId         String?
+  venue           Venue?   @relation(fields: [venueId], references: [id])
+  locationAddress String?
+  locationLat     Float?
+  locationLng     Float?
+
+  // Host
+  hostId          String?
+  host            Host?    @relation(fields: [hostId], references: [id])
+
+  // Cost
+  isFree          Boolean  @default(true)
+  cost            Float?
+  costDescription String?
+
+  // Registration
+  registrationUrl String?
+  moreInfoUrl     String?
+
+  // Status
+  status          String   @default("DRAFT") // DRAFT, PENDING, PUBLISHED, REJECTED
+  rejectionNote   String?
+
+  // Recurrence
+  isRecurring     Boolean  @default(false)
+  recurrenceRuleId String?
+  recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  parentEventId   String?
+  parentEvent     Event?   @relation("RecurringInstances", fields: [parentEventId], references: [id])
+  childEvents     Event[]  @relation("RecurringInstances")
+
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  publishedAt     DateTime?
+
+  // Relations
+  submittedById   String?
+  submittedBy     User?    @relation("SubmittedBy", fields: [submittedById], references: [id])
+  moderatedById   String?
+  moderatedBy     User?    @relation("ModeratedBy", fields: [moderatedById], references: [id])
+
+  calendars       EventCalendar[]
+  categories      EventCategory[]
+  tags            EventTag[]
+  ageGroups       EventAgeGroup[]
+}
+
+// EventCalendar - many-to-many events to calendars
+model EventCalendar {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id])
+
+  @@unique([eventId, calendarId])
+}
+
+// RecurrenceRule - handles recurring event patterns
+model RecurrenceRule {
+  id            String   @id @default(cuid())
+  frequency     String   // DAILY, WEEKLY, MONTHLY
+  interval      Int      @default(1)
+
+  // For WEEKLY
+  daysOfWeek    String?  // JSON array: ["MO","TU","WE"]
+
+  // For MONTHLY
+  dayOfMonth    Int?     // e.g., 15 for "15th of month"
+  weekOfMonth   Int?     // e.g., 3 for "third week"
+  dayOfWeekMonthly String? // e.g., "TH" for "third Thursday"
+
+  // End conditions
+  endDate       DateTime?
+  occurrences   Int?
+
+  createdAt     DateTime @default(now())
+
+  events        Event[]
+}
+
+// Venue - pre-saved locations
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String   @default("Mansfield")
+  state       String   @default("TX")
+  zipCode     String?
+  latitude    Float?
+  longitude   Float?
+  isActive    Boolean  @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      Event[]
+}
+
+// Host - organizations that host events
+model Host {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  contactEmail String?
+  contactPhone String?
+  website     String?
+  isActive    Boolean  @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      Event[]
+}
+
+// Category - event categories
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  color       String   @default("#C8962E")
+  icon        String?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      EventCategory[]
+
+  @@unique([organizationId, slug])
+}
+
+model EventCategory {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([eventId, categoryId])
+}
+
+// Tag - event tags
+model Tag {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      EventTag[]
+
+  @@unique([organizationId, slug])
+}
+
+model EventTag {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id])
+
+  @@unique([eventId, tagId])
+}
+
+// AgeGroup - age group classifications
+model AgeGroup {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  minAge      Int?
+  maxAge      Int?
+  sortOrder   Int      @default(0)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  events      EventAgeGroup[]
+
+  @@unique([organizationId, slug])
+}
+
+model EventAgeGroup {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ageGroupId String
+  ageGroup   AgeGroup @relation(fields: [ageGroupId], references: [id])
+
+  @@unique([eventId, ageGroupId])
+}
+
+// DomainWhitelist - approved domains for embedding
+model DomainWhitelist {
+  id          String   @id @default(cuid())
+  domain      String
+  isActive    Boolean  @default(true)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  calendarId  String?
+  calendar    Calendar? @relation(fields: [calendarId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
