@@ -109,13 +109,13 @@ export default function EventPage({ params }: EventPageProps) {
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div className="flex-1">
               {/* Calendar */}
-              {event.calendar && (
+              {event.calendars?.[0]?.calendar && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span
                     className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                    style={{ backgroundColor: event.calendar.color }}
+                    style={{ backgroundColor: event.calendars[0].calendar.color }}
                   >
-                    {event.calendar.name}
+                    {event.calendars[0].calendar.name}
                   </span>
                 </div>
               )}
@@ -196,7 +196,7 @@ export default function EventPage({ params }: EventPageProps) {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">About this event</h2>
             <p className="text-gray-600 font-medium mb-4">{event.shortDescription}</p>
             <div className="text-gray-600 whitespace-pre-wrap">
-              {event.description}
+              {event.longDescription}
             </div>
           </div>
 
@@ -208,7 +208,7 @@ export default function EventPage({ params }: EventPageProps) {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Categories</h3>
                   <div className="flex flex-wrap gap-2">
-                    {event.categories.map((category) => (
+                    {event.categories.map(({ category }) => (
                       <Badge key={category.id} variant="info">
                         {category.name}
                       </Badge>
@@ -222,7 +222,7 @@ export default function EventPage({ params }: EventPageProps) {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Tags</h3>
                   <div className="flex flex-wrap gap-2">
-                    {event.tags.map((tag) => (
+                    {event.tags.map(({ tag }) => (
                       <Badge key={tag.id}>{tag.name}</Badge>
                     ))}
                   </div>
@@ -234,7 +234,7 @@ export default function EventPage({ params }: EventPageProps) {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Age Groups</h3>
                   <div className="flex flex-wrap gap-2">
-                    {event.ageGroups.map((ageGroup) => (
+                    {event.ageGroups.map(({ ageGroup }) => (
                       <Badge key={ageGroup.id} variant="default">
                         <Users className="w-3 h-3 mr-1" />
                         {ageGroup.name}
