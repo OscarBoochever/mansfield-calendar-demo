@@ -22,11 +22,16 @@ body {
   background: var(--background);
 }
 
-/* Focus styles for accessibility - visible on all interactive elements */
+/* Focus styles for accessibility - visible on keyboard focus only */
 :focus-visible {
-  outline: 3px solid var(--primary);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 2px;
+}
+
+/* Remove focus outline on mouse click for buttons */
+button:focus:not(:focus-visible),
+[role="tab"]:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Ensure focus is visible in high contrast mode */
