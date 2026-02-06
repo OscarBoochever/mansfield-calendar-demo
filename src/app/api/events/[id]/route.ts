@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { mockEvents, mockPendingEvents } from '@/lib/mockData'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
@@ -8,48 +10,8 @@ export async function GET(
   try {
     const { id } = await params
 
-    const event = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        venue: true,
-        host: true,
-        calendars: {
-          include: {
-            calendar: true,
-          },
-        },
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-        ageGroups: {
-          include: {
-            ageGroup: true,
-          },
-        },
-        recurrenceRule: true,
-        submittedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        moderatedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
+    // Search in both published and pending events
+    const event = mockEvents.find(e => e.id === id) || mockPendingEvents.find(e => e.id === id)
 
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
