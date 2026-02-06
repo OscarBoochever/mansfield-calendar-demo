@@ -1,4 +1,5 @@
-import { prisma } from '@/lib/db'
+'use client'
+
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -13,60 +14,17 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { mockEvents, mockPendingEvents, mockUsers, mockCalendars } from '@/lib/mockData'
 
-async function getDashboardStats() {
-  const [
-    totalEvents,
-    publishedEvents,
-    pendingEvents,
-    draftEvents,
-    totalUsers,
-    totalCalendars,
-    upcomingEvents,
-    recentEvents,
-  ] = await Promise.all([
-    prisma.event.count(),
-    prisma.event.count({ where: { status: 'PUBLISHED' } }),
-    prisma.event.count({ where: { status: 'PENDING' } }),
-    prisma.event.count({ where: { status: 'DRAFT' } }),
-    prisma.user.count(),
-    prisma.calendar.count(),
-    prisma.event.findMany({
-      where: {
-        status: 'PUBLISHED',
-        startDate: { gte: new Date() },
-      },
-      include: {
-        calendars: { include: { calendar: true } },
-      },
-      orderBy: { startDate: 'asc' },
-      take: 5,
-    }),
-    prisma.event.findMany({
-      where: { status: 'PENDING' },
-      include: {
-        submittedBy: { select: { name: true } },
-        calendars: { include: { calendar: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    }),
-  ])
-
-  return {
-    totalEvents,
-    publishedEvents,
-    pendingEvents,
-    draftEvents,
-    totalUsers,
-    totalCalendars,
-    upcomingEvents,
-    recentEvents,
+export default function AdminDashboard() {
+  const stats = {
+    totalEvents: mockEvents.length + mockPendingEvents.length,
+    publishedEvents: mockEvents.length,
+    pendingEvents: mockPendingEvents.length,
+    draftEvents: 2,
+    totalUsers: mockUsers.length,
+    totalCalendars: mockCalendars.length,
   }
-}
-
-export default async function AdminDashboard() {
-  const stats = await getDashboardStats()
 
   const statCards = [
     {
@@ -116,25 +74,26 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => {
           const Icon = stat.icon
-          const Wrapper = stat.href ? Link : 'div'
-          return (
-            <Wrapper
-              key={stat.name}
-              href={stat.href as string}
-              className="block"
-            >
-              <Card className={stat.href ? 'hover:shadow-md transition-shadow' : ''}>
-                <CardBody className="flex items-center gap-4">
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">{stat.name}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  </div>
-                </CardBody>
-              </Card>
-            </Wrapper>
+          const content = (
+            <Card className={stat.href ? 'hover:shadow-md transition-shadow cursor-pointer' : ''}>
+              <CardBody className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${stat.color}`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">{stat.name}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                </div>
+              </CardBody>
+            </Card>
+          )
+
+          return stat.href ? (
+            <Link key={stat.name} href={stat.href}>
+              {content}
+            </Link>
+          ) : (
+            <div key={stat.name}>{content}</div>
           )
         })}
       </div>
@@ -153,13 +112,13 @@ export default async function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardBody className="p-0">
-            {stats.recentEvents.length === 0 ? (
+            {mockPendingEvents.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No events pending review
               </div>
             ) : (
               <ul className="divide-y divide-gray-200">
-                {stats.recentEvents.map((event) => (
+                {mockPendingEvents.map((event) => (
                   <li key={event.id}>
                     <Link
                       href={`/admin/moderation?event=${event.id}`}
@@ -171,7 +130,7 @@ export default async function AdminDashboard() {
                             {event.title}
                           </p>
                           <p className="text-sm text-gray-500">
-                            Submitted by {event.submittedBy?.name || 'Unknown'}
+                            Submitted by {event.submitterName || 'Unknown'}
                           </p>
                         </div>
                         <StatusBadge status={event.status} />
@@ -197,13 +156,13 @@ export default async function AdminDashboard() {
             </Link>
           </CardHeader>
           <CardBody className="p-0">
-            {stats.upcomingEvents.length === 0 ? (
+            {mockEvents.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No upcoming events
               </div>
             ) : (
               <ul className="divide-y divide-gray-200">
-                {stats.upcomingEvents.map((event) => (
+                {mockEvents.slice(0, 5).map((event) => (
                   <li key={event.id}>
                     <Link
                       href={`/admin/events?event=${event.id}`}
@@ -218,12 +177,12 @@ export default async function AdminDashboard() {
                             {formatDate(event.startDate)}
                           </p>
                         </div>
-                        {event.calendars[0]?.calendar && (
+                        {event.calendar && (
                           <span
                             className="px-2 py-1 rounded text-xs text-white flex-shrink-0"
-                            style={{ backgroundColor: event.calendars[0].calendar.color }}
+                            style={{ backgroundColor: event.calendar.color }}
                           >
-                            {event.calendars[0].calendar.name}
+                            {event.calendar.name}
                           </span>
                         )}
                       </div>

@@ -1,21 +1,10 @@
-import { prisma } from '@/lib/db'
+'use client'
+
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Plus, Search, MoreVertical, Edit, Trash, Mail, Shield } from 'lucide-react'
-import Link from 'next/link'
-import { formatDate } from '@/lib/utils'
-
-async function getUsers() {
-  return prisma.user.findMany({
-    include: {
-      calendarRoles: {
-        include: { calendar: true },
-      },
-    },
-    orderBy: { name: 'asc' },
-  })
-}
+import { Plus, Search, Edit, Shield, Mail } from 'lucide-react'
+import { mockUsers } from '@/lib/mockData'
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-purple-100 text-purple-800',
@@ -24,8 +13,8 @@ const roleColors: Record<string, string> = {
   PUBLIC_USER: 'bg-gray-100 text-gray-800',
 }
 
-export default async function UsersPage() {
-  const users = await getUsers()
+export default function UsersPage() {
+  const users = mockUsers
 
   return (
     <div className="space-y-6">
@@ -74,13 +63,10 @@ export default async function UsersPage() {
                   User
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Roles
+                  Role
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Joined
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -88,87 +74,57 @@ export default async function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {users.map((user) => {
-                // Get highest role for display
-                const roles = user.calendarRoles.map((r) => r.role)
-                const highestRole = roles.includes('ADMIN')
-                  ? 'ADMIN'
-                  : roles.includes('EDITOR')
-                  ? 'EDITOR'
-                  : roles.includes('CONTRIBUTOR')
-                  ? 'CONTRIBUTOR'
-                  : 'PUBLIC_USER'
-
-                return (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary-700">
-                            {user.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')
-                              .toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{user.name}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                        </div>
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary-700">
+                          {user.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase()}
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {user.calendarRoles.slice(0, 3).map((role) => (
-                          <span
-                            key={role.id}
-                            className={`px-2 py-1 rounded text-xs font-medium ${roleColors[role.role]}`}
-                            title={`${role.role} on ${role.calendar.name}`}
-                          >
-                            {role.calendar.name}
-                          </span>
-                        ))}
-                        {user.calendarRoles.length > 3 && (
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                            +{user.calendarRoles.length - 3} more
-                          </span>
-                        )}
+                      <div>
+                        <p className="font-medium text-gray-900">{user.name}</p>
+                        <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <Badge variant={user.isActive ? 'success' : 'default'}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-500">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-                          title="Edit user"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-                          title="Manage permissions"
-                        >
-                          <Shield className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-                          title="Send email"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${roleColors[user.role]}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <Badge variant="success">Active</Badge>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+                        title="Edit user"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+                        title="Manage permissions"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+                        title="Send email"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -1,144 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { mockEvents, mockPendingEvents } from '@/lib/mockData'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
+    const status = searchParams.get('status')
+    const search = searchParams.get('search')
+    const calendars = searchParams.get('calendars')?.split(',').filter(Boolean)
+    const categories = searchParams.get('categories')?.split(',').filter(Boolean)
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
 
-    // Parse query parameters
-    const search = searchParams.get('search') || ''
-    const calendars = searchParams.get('calendars')?.split(',').filter(Boolean) || []
-    const categories = searchParams.get('categories')?.split(',').filter(Boolean) || []
-    const tags = searchParams.get('tags')?.split(',').filter(Boolean) || []
-    const ageGroups = searchParams.get('ageGroups')?.split(',').filter(Boolean) || []
-    const hosts = searchParams.get('hosts')?.split(',').filter(Boolean) || []
-    const venues = searchParams.get('venues')?.split(',').filter(Boolean) || []
-    const status = searchParams.get('status') || 'PUBLISHED'
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    // Start with all events or pending events based on status
+    let filtered = status === 'PENDING'
+      ? [...mockPendingEvents]
+      : [...mockEvents]
 
-    // Build where clause
-    const where: any = {
-      status: status === 'all' ? undefined : status,
-      startDate: {
-        gte: new Date(),
-      },
+    // Filter by status (for non-pending requests)
+    if (status && status !== 'PENDING') {
+      filtered = filtered.filter(e => e.status === status)
     }
 
-    // Search filter
+    // Filter by search
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { shortDescription: { contains: search } },
-        { longDescription: { contains: search } },
-        { host: { name: { contains: search } } },
-      ]
+      const searchLower = search.toLowerCase()
+      filtered = filtered.filter(e =>
+        e.title.toLowerCase().includes(searchLower) ||
+        e.description.toLowerCase().includes(searchLower)
+      )
     }
 
-    // Calendar filter
-    if (calendars.length > 0) {
-      where.calendars = {
-        some: {
-          calendarId: { in: calendars },
-        },
-      }
+    // Filter by calendars
+    if (calendars && calendars.length > 0) {
+      filtered = filtered.filter(e => e.calendarId && calendars.includes(e.calendarId))
     }
 
-    // Category filter
-    if (categories.length > 0) {
-      where.categories = {
-        some: {
-          categoryId: { in: categories },
-        },
-      }
+    // Filter by categories
+    if (categories && categories.length > 0) {
+      filtered = filtered.filter(e =>
+        'categories' in e && e.categories?.some((c: { id: string }) => categories.includes(c.id))
+      )
     }
 
-    // Tag filter
-    if (tags.length > 0) {
-      where.tags = {
-        some: {
-          tagId: { in: tags },
-        },
-      }
-    }
+    // Sort by date
+    filtered.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
 
-    // Age group filter
-    if (ageGroups.length > 0) {
-      where.ageGroups = {
-        some: {
-          ageGroupId: { in: ageGroups },
-        },
-      }
+    // Apply limit
+    if (limit) {
+      filtered = filtered.slice(0, limit)
     }
-
-    // Host filter
-    if (hosts.length > 0) {
-      where.hostId = { in: hosts }
-    }
-
-    // Venue filter
-    if (venues.length > 0) {
-      where.venueId = { in: venues }
-    }
-
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
-        where,
-        include: {
-          venue: true,
-          host: true,
-          calendars: {
-            include: {
-              calendar: true,
-            },
-          },
-          categories: {
-            include: {
-              category: true,
-            },
-          },
-          tags: {
-            include: {
-              tag: true,
-            },
-          },
-          ageGroups: {
-            include: {
-              ageGroup: true,
-            },
-          },
-          recurrenceRule: true,
-          submittedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: {
-          startDate: 'asc',
-        },
-        take: limit,
-        skip: offset,
-      }),
-      prisma.event.count({ where }),
-    ])
 
     return NextResponse.json({
-      data: events,
+      data: filtered,
       pagination: {
-        total,
-        limit,
-        offset,
-        hasMore: offset + events.length < total,
+        total: filtered.length,
+        page: 1,
+        limit: limit || filtered.length,
+        totalPages: 1,
       },
     })
   } catch (error) {
     console.error('Error fetching events:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch events' },
-      { status: 500 }
-    )
+    return NextResponse.json({ data: mockEvents.slice(0, 6) })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: 'demo-' + Date.now(),
+        ...body,
+        status: 'PENDING',
+      },
+    })
+  } catch (error) {
+    console.error('Error creating event:', error)
+    return NextResponse.json({ error: 'Failed to create event' }, { status: 500 })
   }
 }

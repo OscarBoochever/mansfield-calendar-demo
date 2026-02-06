@@ -1,28 +1,14 @@
-import { prisma } from '@/lib/db'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+'use client'
+
+import { Card, CardBody } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Clock, Calendar, MapPin, User } from 'lucide-react'
 import { formatDate, formatTime } from '@/lib/utils'
 import { ModerationActions } from '@/components/ModerationActions'
+import { mockPendingEvents} from '@/lib/mockData'
 
-async function getPendingEvents() {
-  return prisma.event.findMany({
-    where: { status: 'PENDING' },
-    include: {
-      calendars: { include: { calendar: true } },
-      host: true,
-      venue: true,
-      categories: { include: { category: true } },
-      tags: { include: { tag: true } },
-      ageGroups: { include: { ageGroup: true } },
-      submittedBy: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: 'asc' },
-  })
-}
-
-export default async function ModerationPage() {
-  const pendingEvents = await getPendingEvents()
+export default function ModerationPage() {
+  const pendingEvents = mockPendingEvents
 
   return (
     <div className="space-y-6">
@@ -63,15 +49,6 @@ export default async function ModerationPage() {
                       <div>
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <StatusBadge status={event.status} />
-                          {event.calendars.map(({ calendar }) => (
-                            <span
-                              key={calendar.id}
-                              className="px-2 py-1 rounded text-xs text-white"
-                              style={{ backgroundColor: calendar.color }}
-                            >
-                              {calendar.name}
-                            </span>
-                          ))}
                         </div>
                         <h2 className="text-xl font-semibold text-gray-900">
                           {event.title}
@@ -88,44 +65,14 @@ export default async function ModerationPage() {
                           {formatDate(event.startDate)} at {formatTime(event.startDate)}
                         </span>
                       </div>
-                      {(event.venue || event.locationAddress) && (
-                        <div className="flex items-center gap-2 text-gray-500">
-                          <MapPin className="w-4 h-4" />
-                          <span>{event.venue?.name || event.locationAddress}</span>
-                        </div>
-                      )}
-                      {event.submittedBy && (
+                      {event.submitterName && (
                         <div className="flex items-center gap-2 text-gray-500">
                           <User className="w-4 h-4" />
                           <span>
-                            Submitted by {event.submittedBy.name} ({event.submittedBy.email})
+                            Submitted by {event.submitterName} ({event.submitterEmail})
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <Calendar className="w-4 h-4" />
-                        <span>Submitted {formatDate(event.createdAt)}</span>
-                      </div>
-                    </div>
-
-                    {/* Categories & Tags */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {event.categories.map(({ category }) => (
-                        <span
-                          key={category.id}
-                          className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800"
-                        >
-                          {category.name}
-                        </span>
-                      ))}
-                      {event.tags.map(({ tag }) => (
-                        <span
-                          key={tag.id}
-                          className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700"
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 </div>
@@ -134,7 +81,7 @@ export default async function ModerationPage() {
                 <ModerationActions
                   eventId={event.id}
                   eventTitle={event.title}
-                  submitterEmail={event.submittedBy?.email}
+                  submitterEmail={event.submitterEmail}
                 />
               </div>
             </Card>

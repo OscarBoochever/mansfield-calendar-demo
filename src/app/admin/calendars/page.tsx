@@ -1,27 +1,17 @@
-import { prisma } from '@/lib/db'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+'use client'
+
+import { Card, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Plus, Edit, Trash, Globe, Users, Calendar, Settings } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus, Edit, Globe, Calendar, Settings, Users } from 'lucide-react'
+import { mockCalendars, mockEvents } from '@/lib/mockData'
 
-async function getCalendars() {
-  return prisma.calendar.findMany({
-    include: {
-      _count: {
-        select: {
-          events: true,
-          userRoles: true,
-        },
-      },
-      domainWhitelist: true,
-    },
-    orderBy: { name: 'asc' },
-  })
-}
-
-export default async function CalendarsPage() {
-  const calendars = await getCalendars()
+export default function CalendarsPage() {
+  const calendars = mockCalendars.map(cal => ({
+    ...cal,
+    eventCount: mockEvents.filter(e => e.calendarId === cal.id).length,
+    userCount: 3,
+  }))
 
   return (
     <div className="space-y-6">
@@ -67,43 +57,16 @@ export default async function CalendarsPage() {
                 </Badge>
               </div>
 
-              {calendar.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {calendar.description}
-                </p>
-              )}
-
               <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  {calendar._count.events} events
+                  {calendar.eventCount} events
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  {calendar._count.userRoles} users
+                  {calendar.userCount} users
                 </span>
               </div>
-
-              {calendar.domainWhitelist.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-500 mb-1">Embed Domains</p>
-                  <div className="flex flex-wrap gap-1">
-                    {calendar.domainWhitelist.slice(0, 2).map((domain) => (
-                      <span
-                        key={domain.id}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-                      >
-                        {domain.domain}
-                      </span>
-                    ))}
-                    {calendar.domainWhitelist.length > 2 && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                        +{calendar.domainWhitelist.length - 2} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                 <Button variant="ghost" size="sm" className="flex-1">

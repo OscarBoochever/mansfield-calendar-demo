@@ -1,24 +1,15 @@
-import { prisma } from '@/lib/db'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+'use client'
+
+import { Card, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { StatusBadge } from '@/components/ui/Badge'
-import { Plus, Search, Filter, MoreVertical, Edit, Trash, Eye } from 'lucide-react'
+import { Plus, Search, Edit, Trash, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { mockEvents, mockPendingEvents } from '@/lib/mockData'
 
-async function getEvents() {
-  return prisma.event.findMany({
-    include: {
-      calendars: { include: { calendar: true } },
-      host: { select: { name: true } },
-      submittedBy: { select: { name: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
-}
-
-export default async function AdminEventsPage() {
-  const events = await getEvents()
+export default function AdminEventsPage() {
+  const events = [...mockEvents, ...mockPendingEvents]
 
   return (
     <div className="space-y-6">
@@ -82,9 +73,6 @@ export default async function AdminEventsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created By
-                </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -111,12 +99,12 @@ export default async function AdminEventsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    {event.calendars[0]?.calendar && (
+                    {'calendar' in event && event.calendar && (
                       <span
                         className="px-2 py-1 rounded text-xs text-white"
-                        style={{ backgroundColor: event.calendars[0].calendar.color }}
+                        style={{ backgroundColor: event.calendar.color }}
                       >
-                        {event.calendars[0].calendar.name}
+                        {event.calendar.name}
                       </span>
                     )}
                   </td>
@@ -125,9 +113,6 @@ export default async function AdminEventsPage() {
                   </td>
                   <td className="px-4 py-4">
                     <StatusBadge status={event.status} />
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-500">
-                    {event.submittedBy?.name || '-'}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
@@ -138,13 +123,12 @@ export default async function AdminEventsPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      <Link
-                        href={`/admin/events/${event.id}/edit`}
+                      <button
                         className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
                         title="Edit"
                       >
                         <Edit className="w-4 h-4" />
-                      </Link>
+                      </button>
                       <button
                         className="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-gray-100"
                         title="Delete"
