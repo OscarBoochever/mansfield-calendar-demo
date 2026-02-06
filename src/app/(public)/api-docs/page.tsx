@@ -18,13 +18,13 @@ export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
-      <div className="bg-secondary-700 text-white py-12">
+      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 mb-4">
             <Code className="w-8 h-8" />
             <h1 className="text-3xl font-bold">API Documentation</h1>
           </div>
-          <p className="text-secondary-200 max-w-2xl">
+          <p className="text-slate-300 max-w-2xl">
             Integrate Mansfield Calendar events into your applications using our REST APIs.
             Choose between the Public Widget API for embedded calendars or the Secure Server API
             for backend integrations.
